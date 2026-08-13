@@ -22,6 +22,7 @@ describe("loadConfig", () => {
     assert.strictEqual(config.userCharLimit, 5000);
     assert.strictEqual(config.nudgeInterval, 10);
     assert.strictEqual(config.reviewRecentMessages, 0);
+    assert.strictEqual(config.fileOnlyMode, undefined);
     assert.strictEqual(config.reviewEnabled, true);
     assert.strictEqual(config.reviewTransport, "direct");
     assert.strictEqual(config.flushOnCompact, true);
@@ -82,6 +83,7 @@ describe("loadConfig", () => {
       projectsMemoryDir: "my-memory",
       llmModelOverride: " openrouter/deepseek/deepseek-v4-flash ",
       llmThinkingOverride: "minimal",
+      fileOnlyMode: true,
     }));
     const config = loadConfig(TEST_CONFIG_PATH);
     assert.strictEqual(config.memoryMode, "legacy-inject");
@@ -97,6 +99,7 @@ describe("loadConfig", () => {
     assert.strictEqual(config.projectsMemoryDir, "my-memory");
     assert.strictEqual(config.llmModelOverride, "openrouter/deepseek/deepseek-v4-flash");
     assert.strictEqual(config.llmThinkingOverride, "minimal");
+    assert.strictEqual(config.fileOnlyMode, true);
     // Unset values use defaults
     assert.strictEqual(config.userCharLimit, 5000);
     assert.strictEqual(config.reviewEnabled, true);

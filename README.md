@@ -37,6 +37,34 @@ pi install npm:pi-hermes-memory
 /learn-memory-tool
 ```
 
+## Jachin fork：Markdown-first 模式
+
+本 fork 支持 `fileOnlyMode`。开启后，Memory Markdown 文件由普通文件工具按需读取和修改，不注册 Memory CRUD/Search 工具，也不运行后台 Memory 学习、自动写回、纠正检测和自动整理。`STANDING.md` 仍由插件注入，入口和绝对路径由 `MEMORY_INDEX.md` 指定。Session Search 和 Skills 保持独立。
+
+安装本 fork：
+
+```bash
+pi install git:github.com/JachinShen/pi-hermes-memory
+```
+
+配置 `~/.pi/agent/hermes-memory-config.json`：
+
+```json
+{
+  "memoryMode": "policy-only",
+  "memoryPolicyStyle": "custom",
+  "memoryPolicyCustomText": "需要持久化上下文时，读取 `/Users/jachinshen/.pi/agent/pi-hermes-memory/MEMORY_INDEX.md`，再按任务相关性读取其中列出的绝对路径。使用现有文件工具按需读取，不要默认读取全部记忆文件。",
+  "fileOnlyMode": true,
+  "reviewEnabled": false,
+  "failureInjectionEnabled": false,
+  "flushOnCompact": false,
+  "flushOnShutdown": false,
+  "correctionDetection": false,
+  "memoryOverflowStrategy": "reject",
+  "standingInstructionsEnabled": true
+}
+```
+
 ## Upgrade Notes (v0.7.10)
 
 If you’re upgrading from older versions, startup now auto-migrates extension data safely:
@@ -488,6 +516,7 @@ Create `~/.pi/agent/hermes-memory-config.json`:
 {
   "memoryMode": "policy-only",
   "memoryPolicyStyle": "full",
+  "fileOnlyMode": true,
   "memoryCharLimit": 5000,
   "userCharLimit": 5000,
   "projectCharLimit": 5000,
@@ -521,6 +550,7 @@ Create `~/.pi/agent/hermes-memory-config.json`:
 | `memoryMode` | `policy-only` | Prompt behavior: `policy-only` injects only memory policy; `legacy-inject` restores full memory prompt injection |
 | `memoryPolicyStyle` | `full` | Policy text used in `policy-only` mode: `full` preserves the default v0.7 policy; `compact` uses shorter built-in guidance; `custom` uses `memoryPolicyCustomText`; `none` injects no policy text |
 | `memoryPolicyCustomText` | unset | Custom policy text used when `memoryPolicyStyle` is `custom`; blank or missing text falls back to `compact` |
+| `fileOnlyMode` | `false` | Markdown-first mode: disables Memory CRUD/Search tools and model-driven Memory write-back; ordinary file tools remain the source of truth |
 | `standingInstructionsEnabled` | `true` | Inject `STANDING.md` (pinned via `/memory-pin`) into every session, in every memory mode |
 | `memoryCharLimit` | `5000` | Max characters in MEMORY.md |
 | `userCharLimit` | `5000` | Max characters in USER.md |

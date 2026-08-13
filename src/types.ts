@@ -22,6 +22,8 @@ export interface MemoryConfig {
   memoryMode: "policy-only" | "legacy-inject";
   /** Policy prompt style used when memoryMode is policy-only. Default: full */
   memoryPolicyStyle?: "full" | "compact" | "custom" | "none";
+  /** File-only mode: keep Markdown as the source of truth and do not expose memory CRUD/search tools. */
+  fileOnlyMode?: boolean;
   /** Custom policy prompt text used when memoryPolicyStyle is custom */
   memoryPolicyCustomText?: string;
   /** Max chars for MEMORY.md (agent notes). Default: 5000 */

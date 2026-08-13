@@ -92,6 +92,7 @@ export function loadConfig(configPath = DEFAULT_CONFIG_PATH): MemoryConfig {
         parsed.memoryPolicyStyle === "custom" ||
         parsed.memoryPolicyStyle === "none"
       ) config.memoryPolicyStyle = parsed.memoryPolicyStyle;
+      if (typeof parsed.fileOnlyMode === "boolean") config.fileOnlyMode = parsed.fileOnlyMode;
       if (typeof parsed.memoryPolicyCustomText === "string") config.memoryPolicyCustomText = parsed.memoryPolicyCustomText;
       if (typeof parsed.memoryCharLimit === "number") config.memoryCharLimit = parsed.memoryCharLimit;
       if (typeof parsed.userCharLimit === "number") config.userCharLimit = parsed.userCharLimit;

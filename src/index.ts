@@ -229,68 +229,64 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
-  // ── 3. Register action-specific memory write tools with SQLite sync ──
-  configureMemoryToolProjectStore = registerMemoryTool(pi, store, projectStoreRef, dbManager, projectNameRef);
+  // ── 3-8. Optional memory mutation pipeline ──
+  // File-only mode keeps Markdown readable through the ordinary file tools.
+  // It deliberately does not register memory CRUD/search tools or any
+  // model-driven write-back path; STANDING.md remains the only injected
+  // memory content and MEMORY_INDEX.md is the explicit discovery entrypoint.
+  if (!config.fileOnlyMode) {
+    configureMemoryToolProjectStore = registerMemoryTool(pi, store, projectStoreRef, dbManager, projectNameRef);
+    setupBackgroundReview(pi, store, projectStoreRef, config, {
+      dbManager,
+      projectName: projectNameRef,
+    });
+    setupSessionFlush(pi, store, projectStoreRef, config, dbManager, projectNameRef);
 
-  // ── 4. Register the skill tool ──
-  registerSkillTool(pi, skillStore);
+    const runAutoConsolidation = async (
+      target: "memory" | "user" | "failure",
+      targetStore: MemoryStore,
+      toolTarget: "memory" | "user" | "failure" | "project",
+      signal?: AbortSignal,
+    ) => {
+      const result = await triggerConsolidation(
+        pi,
+        targetStore,
+        target,
+        signal,
+        config.consolidationTimeoutMs,
+        toolTarget,
+        config,
+      );
+      if (result.deferred) {
+        console.info(`⏳ Auto-consolidation for '${toolTarget}' deferred: ${result.error ?? "another session holds the consolidation lock"}`);
+      } else if (!result.consolidated) {
+        console.warn(`⚠️ Auto-consolidation failed for '${toolTarget}': ${result.error ?? "no reason reported"}`);
+      }
+      return result;
+    };
 
-  // ── 5. Setup background learning loop (with tool-call-aware nudge) ──
-  setupBackgroundReview(pi, store, projectStoreRef, config, {
-    dbManager,
-    projectName: projectNameRef,
-  });
-
-  // ── 6. Setup session-end flush ──
-  setupSessionFlush(pi, store, projectStoreRef, config, dbManager, projectNameRef);
-
-  // ── 7. Setup auto-consolidation (inject consolidator into stores) ──
-  // A failed auto-consolidation is otherwise invisible outside the tool result,
-  // so log the reason for whoever is watching the session (#135).
-  const runAutoConsolidation = async (
-    target: "memory" | "user" | "failure",
-    targetStore: MemoryStore,
-    toolTarget: "memory" | "user" | "failure" | "project",
-    signal?: AbortSignal,
-  ) => {
-    const result = await triggerConsolidation(
-      pi,
-      targetStore,
-      target,
-      signal,
-      config.consolidationTimeoutMs,
-      toolTarget,
-      config,
-    );
-    if (result.deferred) {
-      console.info(`⏳ Auto-consolidation for '${toolTarget}' deferred: ${result.error ?? "another session holds the consolidation lock"}`);
-    } else if (!result.consolidated) {
-      console.warn(`⚠️ Auto-consolidation failed for '${toolTarget}': ${result.error ?? "no reason reported"}`);
-    }
-    return result;
-  };
-
-  store.setConsolidator((target, signal) => runAutoConsolidation(target, store, target, signal));
-  configureProjectStore = (candidate) => {
-    if (!candidate) return;
-    candidate.setConsolidator((target, signal) =>
-      runAutoConsolidation(target, candidate, target === "memory" ? "project" : target, signal),
-    );
-  };
-  configureProjectStore(projectStore);
-  registerConsolidateCommand(pi, store, config.consolidationTimeoutMs, projectStoreRef, projectNameRef, config, dbManager);
-
-  // ── 8. Setup correction detection ──
-  setupCorrectionDetector(pi, store, projectStoreRef, config, dbManager, projectNameRef);
+    store.setConsolidator((target, signal) => runAutoConsolidation(target, store, target, signal));
+    configureProjectStore = (candidate) => {
+      if (!candidate) return;
+      candidate.setConsolidator((target, signal) =>
+        runAutoConsolidation(target, candidate, target === "memory" ? "project" : target, signal),
+      );
+    };
+    configureProjectStore(projectStore);
+    registerConsolidateCommand(pi, store, config.consolidationTimeoutMs, projectStoreRef, projectNameRef, config, dbManager);
+    setupCorrectionDetector(pi, store, projectStoreRef, config, dbManager, projectNameRef);
+  }
 
   // ── 9. Register commands ──
-  registerInsightsCommand(pi, store, projectStoreRef, projectNameRef);
   registerSkillsCommand(pi, skillStore);
-  registerInterviewCommand(pi, store);
-  registerSwitchProjectCommand(pi, config);
-  registerLearnMemoryCommand(pi);
-  registerSyncMarkdownMemoriesCommand(pi, dbManager, globalDir, config.projectsMemoryDir, agentRoot);
-  registerPreviewContextCommand(pi, store, projectStoreRef, projectNameRef, config, standingStore);
+  if (!config.fileOnlyMode) {
+    registerInsightsCommand(pi, store, projectStoreRef, projectNameRef);
+    registerInterviewCommand(pi, store);
+    registerSwitchProjectCommand(pi, config);
+    registerLearnMemoryCommand(pi);
+    registerSyncMarkdownMemoriesCommand(pi, dbManager, globalDir, config.projectsMemoryDir, agentRoot);
+    registerPreviewContextCommand(pi, store, projectStoreRef, projectNameRef, config, standingStore);
+  }
   if (standingStore) registerStandingPinCommand(pi, standingStore);
 
   // ── 10. Live session indexing ──
@@ -300,9 +296,9 @@ export default function (pi: ExtensionAPI) {
     });
   });
 
-  // ── 11. SQLite session search + extended memory ──
+  // ── 11. SQLite session search (kept independent from Markdown memory) ──
   registerSessionSearchTool(pi, dbManager, config.sessionSearch ?? { variant: "legacy" });
-  registerMemorySearchTool(pi, dbManager);
+  if (!config.fileOnlyMode) registerMemorySearchTool(pi, dbManager);
   registerIndexSessionsCommand(pi);
 
   // ── 12. Auto-index session on shutdown ──
